@@ -109,7 +109,7 @@ object Main {
       val subLength = length(sub)
       val supLength = length(sup)
       val subSequences = flatMap {
-        fill(0)(_ + 1)(_ < _)(length(sup))
+        fill(0)(_ + 1)(_ < _)(supLength)
       }{
         idx =>
           if (idx + subLength <= supLength)
