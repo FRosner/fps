@@ -105,7 +105,7 @@ object Main {
     def exists[T](l: List[T])(cond: T => Boolean): Boolean =
       foldLeft(l, false)((z, elem) => z || cond(elem))
 
-    def hasSubsequence[A](sup: List[A], sub: List[A]) = {//: Boolean = {
+    def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = {
       val subLength = length(sub)
       val supLength = length(sup)
       val subSequences = flatMap {
