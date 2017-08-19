@@ -50,7 +50,7 @@ object Main extends App {
   }
 
   def ints(count: Int)(rng: Rng): (List[Int], Rng) =
-    List.fill(count)(int).foldRight(unit(List.empty[Int]))((i, acc) => map2(i, acc)(_ :: _))(rng)
+    sequence(List.fill(count)(int))(rng)
 
   val int: Rand[Int] = _.nextInt
 
