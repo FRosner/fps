@@ -49,10 +49,8 @@ object Main extends App {
     ((d1, d2, d3), rng3)
   }
 
-  def ints(count: Int)(rng: Rng): (List[Int], Rng) = {
-    val intsAndRngs = List.iterate((0, rng), count + 1){ case (i, r) => r.nextInt }.drop(1)
-    (intsAndRngs.map { case (i, r) => i }, intsAndRngs.last match { case (i, r) => r })
-  }
+  def ints(count: Int)(rng: Rng): (List[Int], Rng) =
+    List.fill(count)(int).foldRight(unit(List.empty[Int]))((i, acc) => map2(i, acc)(_ :: _))(rng)
 
   val int: Rand[Int] = _.nextInt
 
@@ -87,20 +85,13 @@ object Main extends App {
   }
 
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
-    rng => {
-      val asAndRngs = unfold((fs, rng)) {
-        case ((h :: t), r) =>
-          val (newH, newR) = h(r)
-          Some(((newH, newR), (t, newR)))
-        case _ => None
-      }
-      val as = asAndRngs.map { case (a, r) => a }
-      val lastRng = asAndRngs.last match { case (a, r) => r }
-      (as, lastRng)
-    }
+    fs.foldRight(unit(List.empty[A]))((f, acc) => map2(f, acc)(_ :: _))
 
   val rng = SimpleRng(34343L)
   println(sequence(List(int, int, int))(rng))
   println(List(int(rng), int(int(rng)._2), int(int(int(rng)._2)._2)))
+  println()
+
+  println(ints(3)(rng))
 
 }
