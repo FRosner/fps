@@ -88,18 +88,16 @@ sealed trait Stream[+A] {
       .filter { case (x, y) => y.isDefined }
       .forAll { case (x, y) => x == y }
 
+  def tails: Stream[Stream[A]] =
+    Stream.unfold(this) {
+      s => s match {
+        case Cons(h, t) => Some((s, t()))
+        case _ => None
+      }
+    }
+
   def hasSubsequence[B >: A](sub: Stream[B]): Boolean =
-    Stream.unfold((this, sub)) {
-      case (sup, sub) =>
-        sup.headOption.map { _ =>
-          val equals =
-            sup.zipAll(sub)
-              .filter { case (supX, subX) => subX.isDefined }
-              .forAll { case (supX, subX) => supX == subX }
-          val newSup = sup.drop(1)
-          (equals, (newSup, sub))
-        }
-    }.exists(identity)
+    tails.exists(_.startsWith(sub))
 
 }
 
@@ -150,9 +148,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    println(Stream(1,2,3).startsWith(Stream(1,2)))
-    println(Stream(1,2,3).startsWith(Stream(2,3)))
-    println(Stream(1,2).startsWith(Stream(1,2,3)))
+    println(Stream(1,2,3).tails.map(_.toList).toList)
     println()
 
     println(Stream(1,2,3).hasSubsequence(Stream(1,2)))
