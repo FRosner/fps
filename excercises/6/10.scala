@@ -84,8 +84,18 @@ object Main extends App {
     case None => Nil
   }
 
+  def ints(n: Int): Rand[List[Int]] =
+    State.sequence(List.fill(n)(int))
+
   val rng = SimpleRng(34343L)
   println(State.unit[Rng, Int](5).map(_ + 1).run(rng))
   println(State.sequence(List.fill(5)(int)).run(rng))
+
+  val ns: Rand[List[Int]] = for {
+    x <- nonNegativeLessThan(5)
+    y <- int
+    xs <- ints(x)
+  } yield xs.map(_ % 2)
+  println(ns.run(rng))
 
 }
