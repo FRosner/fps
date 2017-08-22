@@ -61,7 +61,7 @@ object Main extends App {
           m
         } else if (input == Coin) {
           if (m.locked && m.candies > 0)
-            m.copy(locked = false)
+            m.copy(locked = false, coins = m.coins + 1)
           else
             m
         } else { // input == Turn
