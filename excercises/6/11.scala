@@ -4,7 +4,25 @@ sealed trait Input
 case object Coin extends Input
 case object Turn extends Input
 
-case class Machine(locked: MachineLocked, candies: NumCandies, coins: NumCoins)
+case class Machine(locked: MachineLocked, candies: NumCandies, coins: NumCoins) {
+
+  def input(input: Input): (Boolean, Machine) = {
+    if (candies <= 0) {
+      (false, this)
+    } else if (input == Coin) {
+      if (locked && candies > 0)
+        (false, this.copy(locked = false, coins = coins + 1))
+      else
+        (false, this)
+    } else { // input == Turn
+      if (locked)
+        (false, this)
+      else
+        (true, this.copy(locked = true, candies = candies - 1))
+    }
+  }
+
+}
 
 object Machine {
   type NumCandies = Int
@@ -54,44 +72,33 @@ object Main extends App {
   // Turning the knob on an unlocked machine will cause it to dispense candy and become locked
   // Turning the knob on a locked machine or inserting a coin into an unlocked machine does nothing
   // A machine that's out of candy ignores all inputs
-  def simulateInput(input: Input): MachineState = State {
-    m => {
-      val newM = {
-        if (m.candies <= 0) {
-          m
-        } else if (input == Coin) {
-          if (m.locked && m.candies > 0)
-            m.copy(locked = false, coins = m.coins + 1)
-          else
-            m
-        } else { // input == Turn
-          if (m.locked)
-            m
-          else
-            m.copy(locked = true, candies = m.candies - 1)
-        }
-      }
-      ((newM.coins, newM.candies), newM)
-    }
-  }
+  def simulateInput(input: Input): State[Machine, Boolean] = State(_.input(input))
 
   // Example: If the input machine has 10 coins and 5 candies and a total of 4 candies are bought, it should return (14,1)
-  def simulateMachine(inputs: List[Input]): MachineState =
-    State.sequence(inputs.map(i => simulateInput(i))).map(_.last)
+  def simulateMachine(inputs: List[Input]): State[Machine, List[Boolean]] =
+    State.sequence(inputs.map(i => simulateInput(i)))
 
   val plusOne = State[Int, Int](s => (s, s + 1))
   val res = for {
     x <- plusOne
     y <- plusOne
   } yield (x, y)
-  println(res.run(0))
+  // println(res.run(0))
 
   val transitions = for {
     x <- simulateInput(Coin)
     y <- simulateInput(Turn)
   } yield y
-  println(transitions.run(Machine(true, 10, 0)))
+  // println(transitions.run(Machine(true, 10, 0)))
 
+  val insertCoin: State[Machine, Boolean] = State(_.input(Coin))
+  val turnKnob: State[Machine, Boolean] = State(_.input(Turn))
+
+  println(insertCoin.flatMap(_ => turnKnob).run(Machine(true, 10, 0)))
+  println(State.sequence(List(insertCoin, turnKnob)).run(Machine(true, 10, 0)))
+
+  val (c, m) = Machine(true, 10, 0).input(Coin)
+  
   println(simulateMachine(List(Coin, Turn)).run(Machine(true, 10 ,0)))
 
 }
