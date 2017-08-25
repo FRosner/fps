@@ -42,6 +42,10 @@ object Par {
     es => es.submit(new Callable[A] {
       override def call: A = a(es).get
     })
+
+  def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
+
+  def run[A](a: Par[A]): A = a(Executors.newFixedThreadPool(10)).get()
 }
 
 
@@ -57,8 +61,6 @@ object Main extends App {
     }
   }
 
-  val pool = Executors.newFixedThreadPool(10)
-
-  println(sum(0 to 10)(pool).get())
+  println(Par.run(sum(0 to 10)))
 
 }
