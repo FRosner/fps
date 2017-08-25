@@ -1,23 +1,10 @@
 package de.frosner.fps.exercises.s7.e3
 
-import java.util.concurrent.{Callable, ExecutorService, Executors, Future}
+import java.util.concurrent._
 
 import de.frosner.fps.exercises.s7.e3.Par.Par
 
-import scala.concurrent.duration.TimeUnit
-
-//class ExecutorService {
-//  def submit[A](a: Callable[A]): Future[A] = ???
-//}
-//
-//trait Callable[A] { def call: A }
-//trait Future[A] {
-//  def get: A
-//  def get(timeout: Long, unit: TimeUnit): A
-//  def cancel(evenIfRunning: Boolean): Boolean
-//  def isDone: Boolean
-//  def isCancelled: Boolean
-//}
+import scala.concurrent.duration.{Duration, TimeUnit}
 
 object Par {
   type Par[A] = ExecutorService => Future[A]
@@ -31,23 +18,46 @@ object Par {
     def cancel(evenIfRunning: Boolean): Boolean = false
   }
 
+  private case class Map2Future[A, B, C](a: Future[A], b: Future[B])(
+      f: (A, B) => C)
+      extends Future[C] {
+    def isDone = a.isDone && b.isDone
+    def isCancelled = a.isCancelled || b.isCancelled
+    def cancel(evenIfRunning: Boolean) =
+      a.cancel(evenIfRunning) || b.cancel(evenIfRunning)
+    def get = f(a.get, b.get)
+    def get(timeout: Long, units: TimeUnit) = {
+      val timeoutDuration = Duration.create(timeout, units)
+      val (gotA, aTimeNanos) = {
+        val aStart = System.nanoTime()
+        val gotA = a.get(timeout, units)
+        val aEnd = System.nanoTime()
+        (gotA, aEnd - aStart)
+      }
+      val gotB =
+        b.get(timeoutDuration.toNanos - aTimeNanos, TimeUnit.NANOSECONDS)
+      f(gotA, gotB)
+    }
+  }
+
   def map2[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] =
     (es: ExecutorService) => {
       val af = a(es)
       val bf = b(es)
-      UnitFuture(f(af.get, bf.get))
+      Map2Future(af, bf)(f)
     }
 
   def fork[A](a: => Par[A]): Par[A] =
-    es => es.submit(new Callable[A] {
-      override def call: A = a(es).get
-    })
+    es =>
+      es.submit(new Callable[A] {
+        override def call: A = a(es).get
+      })
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
-  def run[A](a: Par[A]): A = a(Executors.newFixedThreadPool(10)).get()
+  def run[A](a: Par[A]): A =
+    a(Executors.newFixedThreadPool(2)).get(2, TimeUnit.SECONDS)
 }
-
 
 object Main extends App {
 
