@@ -61,7 +61,7 @@ object Par {
   def run[A](a: Par[A]): A =
     a(Executors.newFixedThreadPool(10)).get(2, TimeUnit.SECONDS)
 
-  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = {
+  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = fork {
     val fbs: List[Par[B]] = ps.map(asyncF(f))
     sequence(fbs)
   }
